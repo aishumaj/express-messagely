@@ -3,7 +3,7 @@
 const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require("../config");
 const db = require("../db");
-const { NotFoundError} = require("../expressError");
+const { NotFoundError } = require("../expressError");
 
 /** User of the site. */
 
@@ -16,7 +16,7 @@ class User {
   static async register({ username, password, first_name, last_name, phone }) {
     //hash the pw
     let hashedPw = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
-    
+
     //insert into users table
     const results = await db.query(
       `INSERT INTO users (username,
@@ -28,10 +28,10 @@ class User {
                           last_login_at)
         VALUES ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
         RETURNING username, password, first_name, last_name, phone`,
-        [username, hashedPw, first_name, last_name, phone],
+      [username, hashedPw, first_name, last_name, phone],
     );
-    
-    return results.rows[0]; 
+
+    return results.rows[0];
   }
 
   /** Authenticate: is username/password valid? Returns boolean. */
@@ -42,14 +42,14 @@ class User {
       `SELECT password FROM users WHERE username = $1`,
       [username],
     );
-    
+
     const user = result.rows[0];
-    
+
     //bcrypt.compare
-    if(user){
-      return await bcrypt.compare(password, user.password) === true;
-    }
-    return false;
+    // if (user) {
+      return user && await bcrypt.compare(password, user.password) === true;
+    // }
+    // return false;
   }
 
   /** Update last_login_at for user */
@@ -63,9 +63,9 @@ class User {
       [username],
     );
     const user = result.rows[0];
-    
-    if(!user){
-      throw new NotFoundError(message = `${username} is not a valid username.`)
+
+    if (!user) {
+      throw new NotFoundError(`${username} is not a valid username.`);
     }
   }
 
@@ -76,8 +76,8 @@ class User {
     const results = await db.query(
       `SELECT username, first_name, last_name
       FROM users`
-    )
-    
+    );
+
     return results.rows;
   }
 
@@ -103,9 +103,9 @@ class User {
       [username]
     );
     const user = results.rows[0];
-    
-    if(!user){
-      throw new NotFoundError(message = `${username} is not a valid username.`)
+
+    if (!user) {
+      throw new NotFoundError(`${username} is not a valid username.`);
     }
     return user;
   }
@@ -116,7 +116,7 @@ class User {
    *
    * where to_user is
    *   {username, first_name, last_name, phone}
-   * 
+   *
    * result:
    * [{id, to_user:{username, first_name, last_name, phone}, body, sent_at, read_at}]
    */
@@ -137,10 +137,9 @@ class User {
       WHERE m.from_username = $1`,
       [username]
     );
-    
+
     const messagesFromUser = results.rows;
-    
-    //Question: Is there a better way to do this that isn't brute force.
+
     return messagesFromUser.map(m => ({
       id: m.id,
       to_user: {
@@ -153,7 +152,7 @@ class User {
       sent_at: m.sent_at,
       read_at: m.read_at,
     }));
-    
+
   }
 
   /** Return messages to this user.
@@ -165,6 +164,37 @@ class User {
    */
 
   static async messagesTo(username) {
+    const results = await db.query(
+      `SELECT m.id,
+              m.from_username,
+              u.first_name,
+              u.last_name,
+              u.phone,
+              m.body,
+              m.sent_at,
+              m.read_at
+      FROM messages AS m
+        JOIN users AS u
+          ON m.from_username = u.username
+      WHERE m.to_username = $1`,
+      [username]
+    );
+
+    const messagesToUser = results.rows;
+
+    return messagesToUser.map(m => ({
+      id: m.id,
+      from_user: {
+        username: m.from_username,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        phone: m.phone
+      },
+      body: m.body,
+      sent_at: m.sent_at,
+      read_at: m.read_at,
+    }));
+
   }
 }
 
