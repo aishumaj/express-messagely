@@ -13,17 +13,19 @@ const router = new Router();
 /** POST /login: {username, password} => {token} */
 router.post('/login', async function(req, res, next) {
   const { username, password } = req.body;
-  const user = await User.get(username);
-
-  if (user) {
-    if (await User.authenticate(username, password) === true) {
-      User.updateLoginTimestamp(username);
-      const token = jwt.sign(username, SECRET_KEY);
-      return res.json({ token });
-    }
+  try{
+    const user = await User.get(username);
+  } catch(err){
+    throw new UnauthorizedError("Invalid credentials.");
   }
 
-  throw new UnauthorizedError("Invalid credentials.")
+  if (await User.authenticate(username, password) === true) {
+      User.updateLoginTimestamp(username);
+      const token = jwt.sign({username}, SECRET_KEY);
+      return res.json({ token });
+  }
+  
+  throw new UnauthorizedError("Invalid credentials.");
 });
 
 /** POST /register: registers, logs in, and returns token.
@@ -36,7 +38,7 @@ router.post('/login', async function(req, res, next) {
 
   try {
     user = await User.register(req.body);
-    const token = jwt.sign(user.username, SECRET_KEY);
+    const token = jwt.sign({username: user.username}, SECRET_KEY);
 
     return res.json({ token });
   } catch (err) {
