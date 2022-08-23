@@ -40,6 +40,7 @@ function ensureLoggedIn(req, res, next) {
 
 function ensureCorrectUser(req, res, next) {
   try {
+    debugger
     if (!res.locals.user ||
         res.locals.user.username !== req.params.username) {
       throw new UnauthorizedError();
