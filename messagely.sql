@@ -23,6 +23,13 @@ CREATE TABLE messages (
   sent_at TIMESTAMP WITH TIME ZONE NOT NULL,
   read_at TIMESTAMP WITH TIME ZONE);
 
+CREATE TABLE codes (
+  id SERIAL PRIMARY KEY,
+  username TEXT NOT NULL REFERENCES users,
+  code INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  used BOOL NOT NULL);
+
 
 \echo 'Delete and recreate messagely_test db?'
 \prompt 'Return for yes or control-C to cancel > ' foo
@@ -47,4 +54,11 @@ CREATE TABLE messages (
   body TEXT NOT NULL,
   sent_at TIMESTAMP WITH TIME ZONE NOT NULL,
   read_at TIMESTAMP WITH TIME ZONE);
+
+CREATE TABLE codes (
+  id SERIAL PRIMARY KEY,
+  username TEXT NOT NULL REFERENCES users,
+  code INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  used BOOL NOT NULL);
 

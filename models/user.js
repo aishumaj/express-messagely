@@ -4,6 +4,9 @@ const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require("../config");
 const db = require("../db");
 const { NotFoundError } = require("../expressError");
+const { accountSid , authToken, twiPhone } = require("../config");
+const client = require('twilio')(accountSid, authToken);
+
 
 /** User of the site. */
 
@@ -195,6 +198,66 @@ class User {
       read_at: m.read_at,
     }));
 
+  }
+
+  /** Generates a 6-digit code for a user and sends to user's phone number.
+   * Add code to database table: codes.
+   */
+  static async generateCode(username) {
+    const code = Math.floor(100000 + Math.random() * 900000);
+
+    const results = await db.query(
+      `INSERT INTO codes (code, username, created_at)
+      VALUES ($1, $2, current_timestamp)
+      RETURNING code, username
+      `, [code, username]
+    )
+
+    let phone = (await User.get(username)).phone;
+
+    client.messages
+      .create({
+         body: `Your 6-digit code is ${code}.`,
+         from: twiPhone,
+         to: phone
+       })
+      .then(message => console.log(message.sid));
+
+    return results.rows[0];
+
+  }
+
+  /** Accepts a username and 6-digit code. Compares with code in database. */
+  static async checkCodeMatch(username, code) {
+    const lastCode = await db.query(
+      `SELECT code, used FROM codes
+      WHERE username=$1
+      ORDER BY created_at DESC
+      LIMIT 1`, [username]
+    )
+
+    return lastCode.rows[0].code === code && !lastCode.rows[0].used;
+  }
+
+  /** Accepts username and new password. Sets new password in database. */
+  static async resetPassword(username, newPassword, code) {
+    let hashedPw = await bcrypt.hash(newPassword, BCRYPT_WORK_FACTOR);
+
+    await db.query(
+      `UPDATE codes SET used=TRUE
+      WHERE code=$1 AND username=$2
+      RETURNING code, used`, [code, username]
+    );
+
+    debugger;
+    const results = await db.query(
+      `UPDATE users
+      SET password=$1
+      WHERE username=$2
+      RETURNING username`, [hashedPw, username]
+    );
+
+    return results.rows[0];
   }
 }
 
