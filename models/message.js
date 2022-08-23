@@ -4,6 +4,9 @@
 
 const { NotFoundError } = require("../expressError");
 const db = require("../db");
+const { accountSid , authToken, twiPhone } = require("../config");
+const User = require("./user");
+const client = require('twilio')(accountSid, authToken);
 
 /** Message on the site. */
 
@@ -24,6 +27,17 @@ class Message {
              RETURNING id, from_username, to_username, body, sent_at`,
         [from_username, to_username, body]);
 
+    let phone = (await User.get(to_username)).phone;
+    
+    client.messages
+      .create({
+         body,
+         from: twiPhone,
+         to: phone
+       })
+      .then(message => console.log(message.sid));
+    
+    
     return result.rows[0];
   }
 
