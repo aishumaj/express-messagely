@@ -22,9 +22,9 @@ const { UnauthorizedError } = require("../expressError");
 router.get("/:id", ensureLoggedIn, async function(req, res, next) {
   const message = await Message.get(req.params.id);
 
-  if (res.locals.user.username !== message.to_user.username ||
+  if (res.locals.user.username !== message.to_user.username &&
     res.locals.user.username !== message.from_user.username) {
-      throw new UnauthorizedError();
+      throw new UnauthorizedError("Cannot read this message!");
   }
 
   return res.json({ message });

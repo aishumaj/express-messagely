@@ -13,11 +13,11 @@ const router = new Router();
 /** POST /login: {username, password} => {token} */
 router.post('/login', async function(req, res, next) {
   const { username, password } = req.body;
-  try{
-    const user = await User.get(username);
-  } catch(err){
-    throw new UnauthorizedError("Invalid credentials.");
-  }
+  // try{
+  //   const user = await User.get(username);
+  // } catch(err){
+  //   throw new UnauthorizedError("Invalid credentials.");
+  // }
 
   if (await User.authenticate(username, password) === true) {
       User.updateLoginTimestamp(username);
